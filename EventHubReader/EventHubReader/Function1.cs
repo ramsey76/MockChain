@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
@@ -23,6 +24,7 @@ namespace EventHubReader
             var tableClient = cloudStorageAccount.CreateCloudTableClient(new TableClientConfiguration());
 
             var table = tableClient.GetTableReference("mockchain1");
+            var batchOperation = new TableBatchOperation();
 
             foreach (EventData eventData in events)
             {
@@ -35,8 +37,7 @@ namespace EventHubReader
                     var newRocMessage =  new RocMessage(transactionId, id, messageBody);
 
                     var insertOperation = TableOperation.Insert(newRocMessage);
-
-                    await table.ExecuteAsync(insertOperation);
+                    batchOperation.Add(insertOperation);
 
                     // Replace these two lines with your processing logic.
                     log.LogInformation($"C# Event Hub trigger function processed a message: {transactionId} - {id}");
@@ -49,6 +50,8 @@ namespace EventHubReader
                     exceptions.Add(e);
                 }
             }
+
+            await table.ExecuteBatchAsync(batchOperation);
 
             // Once processing of the batch is complete, if any messages in the batch failed processing throw an exception so that there is a record of the failure.
 
